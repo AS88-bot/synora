@@ -247,7 +247,7 @@ The backend exposes a secure proxy for Gemini interactions:
 
 **Aisha Sultana**
 *Aspiring Cloud Architect & Creator of Synora*
-*3rd Year CSE BTech Student*
+*Final Year CSE BTech Student*
 
 ---
 
