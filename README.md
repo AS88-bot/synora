@@ -68,6 +68,8 @@ Dynamic data visualizations built with **Recharts** reveal "Sentiment Arcs" and 
 Integrated with **Firebase Auth**, offering secure Google OAuth and sandbox modes to ensure user data remains private and siloed.
 
 ---
+# Demo
+https://synora-721769240731.us-west1.run.app/
 
 # Tech Stack
 
