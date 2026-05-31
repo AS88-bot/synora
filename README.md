@@ -69,11 +69,6 @@ Integrated with **Firebase Auth**, offering secure Google OAuth and sandbox mode
 
 ---
 
-# Demo
-
-## Live Application
-[View Synora Live](https://ais-dev-u74fhthjwklgkyehq2xm3q-406331881361.asia-east1.run.app)
-
 # Tech Stack
 
 ## Frontend
