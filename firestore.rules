@@ -1,0 +1,151 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Catch-All: Default Closed
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true || 
+        request.auth.token.firebase.sign_in_provider == 'google.com'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Schema Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'role'])
+        && data.keys().size() >= 4 && data.keys().size() <= 6
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 128
+        && data.role == 'user'
+        && (!data.keys().hasAny(['displayName']) || data.displayName is string)
+        && (!data.keys().hasAny(['photoURL']) || data.photoURL is string);
+    }
+
+    function isValidJournalEntry(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'content', 'createdAt', 'sentimentScore', 'sentimentLabel', 'dominantEmotion'])
+        && data.keys().size() >= 7 && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid && data.userId == userId
+        && data.content is string && data.content.size() <= 50000
+        && data.sentimentScore is number && data.sentimentScore >= -1.0 && data.sentimentScore <= 1.0
+        && data.sentimentLabel is string && (data.sentimentLabel == 'positive' || data.sentimentLabel == 'neutral' || data.sentimentLabel == 'negative')
+        && data.dominantEmotion is string && data.dominantEmotion.size() <= 50
+        && (!data.keys().hasAny(['analysisTips']) || (data.analysisTips is string && data.analysisTips.size() <= 5000));
+    }
+
+    function isValidMoodLog(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'moodValue', 'energyValue', 'sleepHours', 'createdAt'])
+        && data.keys().size() >= 6 && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid && data.userId == userId
+        && data.moodValue is int && data.moodValue >= 1 && data.moodValue <= 5
+        && data.energyValue is int && data.energyValue >= 1 && data.energyValue <= 5
+        && data.sleepHours is number && data.sleepHours >= 0.0 && data.sleepHours <= 24.0
+        && (!data.keys().hasAny(['notes']) || (data.notes is string && data.notes.size() <= 2000));
+    }
+
+    function isValidChatSession(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 5
+        && data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid && data.userId == userId
+        && data.title is string && data.title.size() <= 200;
+    }
+
+    function isValidChatMessage(data) {
+      return data.keys().hasAll(['id', 'sessionId', 'sender', 'text', 'createdAt'])
+        && data.keys().size() >= 5 && data.keys().size() <= 6
+        && data.id is string && data.id.size() <= 128
+        && data.sessionId is string && data.sessionId.size() <= 128
+        && data.sender is string && (data.sender == 'user' || data.sender == 'ai')
+        && data.text is string && data.text.size() <= 5000
+        && data.createdAt == request.time
+        && (!data.keys().hasAny(['detectedEmotion']) || (data.detectedEmotion is string && data.detectedEmotion.size() <= 100));
+    }
+
+    // 1. Users Profile Match Block
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isVerified() && isValidUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOwner(userId) && isVerified() && isValidUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().role == existing().role
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL']);
+      allow delete: if false; // Profiles are permanent
+
+      // 2. Journal Entries Subcollection Match Block
+      match /journals/{journalId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerified() && isValidId(journalId) && isValidJournalEntry(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isVerified() && isValidId(journalId) && isValidJournalEntry(incoming(), userId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'sentimentScore', 'sentimentLabel', 'dominantEmotion', 'analysisTips']);
+        allow delete: if isOwner(userId) && isVerified();
+      }
+
+      // 3. Mood Logs Subcollection Match Block
+      match /moodLogs/{moodLogId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerified() && isValidId(moodLogId) && isValidMoodLog(incoming(), userId) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isVerified() && isValidId(moodLogId) && isValidMoodLog(incoming(), userId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['moodValue', 'energyValue', 'sleepHours', 'notes']);
+        allow delete: if isOwner(userId) && isVerified();
+      }
+
+      // 4. Chat Sessions Subcollection Match Block
+      match /chatSessions/{sessionId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isVerified() && isValidId(sessionId) && isValidChatSession(incoming(), userId) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+        allow update: if isOwner(userId) && isVerified() && isValidId(sessionId)
+          && incoming().id == existing().id
+          && incoming().userId == existing().userId
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']); // UpdatedAt changes dynamically
+        allow delete: if isOwner(userId) && isVerified();
+
+        // 5. Messages Sub-subcollection Match Block
+        match /messages/{messageId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && isVerified() && isValidId(messageId) && isValidChatMessage(incoming());
+          allow update: if false; // Dialogue messages are immutable once spoken
+          allow delete: if false; // Cannot selectively alter historic dialogue
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  @apply bg-[#F8FAFF] text-zinc-800 antialiased;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(124, 140, 255, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(110, 197, 255, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(184, 161, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(143, 227, 207, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+}
+
+/* Custom glassmorphism utility */
+.glass-panel {
+  @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.04)];
+}
+
+.glass-input {
+  @apply bg-white/50 backdrop-blur-md border border-white/50 focus:border-indigo-400/50 focus:ring-4 focus:ring-indigo-100/30 transition-all outline-none;
+}
+
+/* Custom scrollbar configurations for clinical dashboards */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-indigo-100 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-indigo-200;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}

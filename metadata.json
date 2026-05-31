@@ -1,0 +1,8 @@
+{
+  "name": "Synora",
+  "description": "Production-grade AI mental wellness platform with emotional support chatbot, mood tracking, and scalable architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
